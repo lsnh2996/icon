@@ -2,12 +2,12 @@
 
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
-background: #0d0d1a;
-display: flex; flex-direction: column;
-align-items: center; justify-content: center;
-min-height: 100vh;
-font-family: 'Press Start 2P', 'Courier New', monospace;
-overflow: hidden;
+  background: white;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  overflow: hidden;
 }
 
 /* ═══════════ CHARACTER SELECT ═══════════ */
@@ -16,7 +16,7 @@ display: flex; flex-direction: column;
 align-items: center; gap: 20px;
 }
 #select-screen h1 {
-color: #e2b714;
+color: black;
 font-size: 16px;
 letter-spacing: 3px;
 text-shadow: 0 0 24px rgba(226,183,20,0.7);
@@ -30,8 +30,8 @@ gap: 12px;
 }
 
 .class-card {
-background: #16162a;
-border: 2px solid #2a2a4a;
+background:transparent;
+border: 2px solid black;
 padding: 14px 18px;
 cursor: pointer;
 transition: all 0.15s;
@@ -40,7 +40,7 @@ align-items: center; gap: 10px;
 width: 130px;
 }
 .class-card:hover {
-border-color: #e2b714;
+border-color: grey;
 transform: translateY(-4px);
 box-shadow: 0 6px 20px rgba(226,183,20,0.2);
 }
@@ -60,19 +60,19 @@ background-size: 1152px 2016px;
 #game-screen { display: none; flex-direction: column; align-items: center; gap: 10px; }
 
 #game-title {
-color: #e2b714; font-size: 11px; letter-spacing: 3px;
+color: black; font-size: 11px; letter-spacing: 3px;
 text-shadow: 0 0 16px rgba(226,183,20,0.5);
 }
 
 #game-wrapper {
 position: relative;
-border: 3px solid #e2b714;
+border: 3px solid black;
 box-shadow: 0 0 40px rgba(226,183,20,0.2);
 }
 
 #arena {
 width: 640px; height: 480px;
-background: #1a2214;
+background: white;
 position: relative; overflow: hidden;
 }
 #arena::before {
@@ -110,10 +110,17 @@ filter: drop-shadow(0 6px 5px rgba(0,0,0,0.7));
 #character.facing-left { transform: scaleX(-1); }
 
 #hud {
-display: flex; justify-content: space-between; align-items: center;
-width: 640px; color: #555; font-size: 7px; padding: 2px 0;
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+
+  width: 640px; 
+  color: black; 
+  font-size: 7px; 
+  padding: 2px 0;
 }
-#hud span { color: #e2b714; }
+#hud span { 
+  color: black; }
 
 #game-wrapper::after {
 content: '';
