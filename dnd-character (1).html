@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>D&D Explorer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #0d0d1a;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  overflow: hidden;
+}
+
+/* ═══════════ CHARACTER SELECT ═══════════ */
+#select-screen {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 20px;
+}
+#select-screen h1 {
+  color: #e2b714;
+  font-size: 16px;
+  letter-spacing: 3px;
+  text-shadow: 0 0 24px rgba(226,183,20,0.7);
+}
+#select-screen p { color: #555; font-size: 7px; letter-spacing: 1px; }
+
+#class-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.class-card {
+  background: #16162a;
+  border: 2px solid #2a2a4a;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+  width: 130px;
+}
+.class-card:hover {
+  border-color: #e2b714;
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(226,183,20,0.2);
+}
+
+.class-preview {
+  width: 96px; height: 96px;
+  image-rendering: pixelated;
+  background-image: url('warrior_sheet.png');
+  background-repeat: no-repeat;
+  background-size: 1152px 2016px;
+}
+
+.class-name { color: #e2b714; font-size: 7px; text-align: center; }
+.class-desc { color: #666; font-size: 5px; text-align: center; line-height: 1.8; }
+
+/* ═══════════ GAME SCREEN ═══════════ */
+#game-screen { display: none; flex-direction: column; align-items: center; gap: 10px; }
+
+#game-title {
+  color: #e2b714; font-size: 11px; letter-spacing: 3px;
+  text-shadow: 0 0 16px rgba(226,183,20,0.5);
+}
+
+#game-wrapper {
+  position: relative;
+  border: 3px solid #e2b714;
+  box-shadow: 0 0 40px rgba(226,183,20,0.2);
+}
+
+#arena {
+  width: 640px; height: 480px;
+  background: #1a2214;
+  position: relative; overflow: hidden;
+}
+#arena::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+/*
+  SPRITESHEET LAYOUT (32x32 per frame, displayed at 3x = 96x96px):
+    Each row = one character class
+    Cols 0-3  = facing DOWN  (idle + 3 walk frames)
+    Cols 4-7  = facing UP    (idle + 3 walk frames)
+    Cols 8-10 = facing RIGHT (idle + 2 walk frames)
+    Col  11   = facing LEFT  (we mirror RIGHT frames using scaleX(-1))
+
+  To show a frame:
+    background-position-x = -(col * 96)px
+    background-position-y = -(row * 96)px
+*/
+#character {
+  position: absolute;
+  width: 96px; height: 96px;
+  image-rendering: pixelated;
+  background-image: url('warrior_sheet.png');
+  background-repeat: no-repeat;
+  background-size: 1152px 2016px;
+  background-position: 0px 0px;
+  filter: drop-shadow(0 6px 5px rgba(0,0,0,0.7));
+}
+#character.facing-left { transform: scaleX(-1); }
+
+#hud {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 640px; color: #555; font-size: 7px; padding: 2px 0;
+}
+#hud span { color: #e2b714; }
+
+#game-wrapper::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px
+  );
+  pointer-events: none; z-index: 99;
+}
+</style>
+</head>
+<body>
+
+<div id="select-screen">
+  <h1>⚔ CHOOSE YOUR CLASS ⚔</h1>
+  <div id="class-grid"></div>
+  <p>click a character to begin</p>
+</div>
+
+<div id="game-screen">
+  <div id="game-title">⚔ D&D EXPLORER ⚔</div>
+  <div id="game-wrapper">
+    <div id="arena">
+      <div id="character"></div>
+    </div>
+  </div>
+  <div id="hud">
+    <div>CLASS: <span id="hud-class">—</span></div>
+    <div>FACING: <span id="hud-dir">DOWN</span></div>
+    <div>ARROW KEYS / WASD TO MOVE</div>
+  </div>
+</div>
+
+<script>
+const CLASSES = [
+  { name: 'FIGHTER', desc: 'Brave &\nversatile',    row: 2  },
+  { name: 'KNIGHT',  desc: 'Heavy armor\n& shield',  row: 4  },
+  { name: 'CLERIC',  desc: 'Holy warrior\n& healer', row: 6  },
+  { name: 'ROGUE',   desc: 'Swift &\ndeadly',        row: 8  },
+  { name: 'RANGER',  desc: 'Scout &\nmarksman',      row: 10 },
+  { name: 'MAGE',    desc: 'Arcane\npower',           row: 13 },
+];
+
+const FRAME_PX = 96; // 32px * 3x display scale
+
+// Build character select cards
+const grid = document.getElementById('class-grid');
+CLASSES.forEach(cls => {
+  const card = document.createElement('div');
+  card.className = 'class-card';
+
+  const preview = document.createElement('div');
+  preview.className = 'class-preview';
+  // Show col 0 (idle, facing down) for this character's row
+  preview.style.backgroundPosition = `0px ${-(cls.row * FRAME_PX)}px`;
+
+  const name = document.createElement('div');
+  name.className = 'class-name';
+  name.textContent = cls.name;
+
+  const desc = document.createElement('div');
+  desc.className = 'class-desc';
+  desc.innerHTML = cls.desc.replace(/\n/g, '<br>');
+
+  card.appendChild(preview);
+  card.appendChild(name);
+  card.appendChild(desc);
+  card.addEventListener('click', () => startGame(cls));
+  grid.appendChild(card);
+});
+
+// Game state
+let selectedClass = null;
+let x = 272, y = 192;
+const SPEED    = 3;
+const ARENA_W  = 640, ARENA_H = 480;
+const CHAR_W   = 96,  CHAR_H  = 96;
+let direction  = 'down';
+let walkFrame  = 0;   // 0 = idle, 1-3 = walk cycle
+let walkTick   = 0;
+const WALK_SPD = 8;   // game ticks between frame changes
+
+const keys = {};
+document.addEventListener('keydown', e => { keys[e.key] = true;  e.preventDefault(); });
+document.addEventListener('keyup',   e => { keys[e.key] = false; });
+
+function startGame(cls) {
+  selectedClass = cls;
+  document.getElementById('select-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'flex';
+  document.getElementById('hud-class').textContent = cls.name;
+  const char = document.getElementById('character');
+  char.style.left = x + 'px';
+  char.style.top  = y + 'px';
+  applySprite();
+  loop();
+}
+
+function applySprite() {
+  const char = document.getElementById('character');
+  let col;
+
+  if (direction === 'down') {
+    col = walkFrame;                     // cols 0-3
+  } else if (direction === 'up') {
+    col = 4 + walkFrame;                 // cols 4-7
+  } else {
+    col = 8 + Math.min(walkFrame, 2);   // cols 8-10
+  }
+
+  // Left is just the right frames mirrored
+  if (direction === 'left') {
+    char.classList.add('facing-left');
+  } else {
+    char.classList.remove('facing-left');
+  }
+
+  char.style.backgroundPosition =
+    `${-(col * FRAME_PX)}px ${-(selectedClass.row * FRAME_PX)}px`;
+
+  document.getElementById('hud-dir').textContent = direction.toUpperCase();
+}
+
+function loop() {
+  let dx = 0, dy = 0;
+  if (keys['ArrowUp']    || keys['w'] || keys['W']) dy = -1;
+  if (keys['ArrowDown']  || keys['s'] || keys['S']) dy =  1;
+  if (keys['ArrowLeft']  || keys['a'] || keys['A']) dx = -1;
+  if (keys['ArrowRight'] || keys['d'] || keys['D']) dx =  1;
+
+  const moving = dx !== 0 || dy !== 0;
+
+  if (dy < 0) direction = 'up';
+  if (dy > 0) direction = 'down';
+  if (dx < 0) direction = 'left';
+  if (dx > 0) direction = 'right';
+
+  if (moving) {
+    walkTick++;
+    if (walkTick >= WALK_SPD) {
+      walkTick  = 0;
+      walkFrame = (walkFrame % 3) + 1; // 1 → 2 → 3 → 1
+    }
+  } else {
+    walkFrame = 0;
+    walkTick  = 0;
+  }
+
+  if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+  x = Math.max(0, Math.min(ARENA_W - CHAR_W, x + dx * SPEED));
+  y = Math.max(0, Math.min(ARENA_H - CHAR_H, y + dy * SPEED));
+
+  const char = document.getElementById('character');
+  char.style.left = x + 'px';
+  char.style.top  = y + 'px';
+  applySprite();
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
