@@ -1,0 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+background: #0d0d1a;
+display: flex; flex-direction: column;
+align-items: center; justify-content: center;
+min-height: 100vh;
+font-family: 'Press Start 2P', 'Courier New', monospace;
+overflow: hidden;
+}
+
+/* ═══════════ CHARACTER SELECT ═══════════ */
+#select-screen {
+display: flex; flex-direction: column;
+align-items: center; gap: 20px;
+}
+#select-screen h1 {
+color: #e2b714;
+font-size: 16px;
+letter-spacing: 3px;
+text-shadow: 0 0 24px rgba(226,183,20,0.7);
+}
+#select-screen p { color: #555; font-size: 7px; letter-spacing: 1px; }
+
+#class-grid {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 12px;
+}
+
+.class-card {
+background: #16162a;
+border: 2px solid #2a2a4a;
+padding: 14px 18px;
+cursor: pointer;
+transition: all 0.15s;
+display: flex; flex-direction: column;
+align-items: center; gap: 10px;
+width: 130px;
+}
+.class-card:hover {
+border-color: #e2b714;
+transform: translateY(-4px);
+box-shadow: 0 6px 20px rgba(226,183,20,0.2);
+}
+
+.class-preview {
+width: 96px; height: 96px;
+image-rendering: pixelated;
+background-image: url('warrior_sheet.png');
+background-repeat: no-repeat;
+background-size: 1152px 2016px;
+}
+
+.class-name { color: #e2b714; font-size: 7px; text-align: center; }
+.class-desc { color: #666; font-size: 5px; text-align: center; line-height: 1.8; }
+
+/* ═══════════ GAME SCREEN ═══════════ */
+#game-screen { display: none; flex-direction: column; align-items: center; gap: 10px; }
+
+#game-title {
+color: #e2b714; font-size: 11px; letter-spacing: 3px;
+text-shadow: 0 0 16px rgba(226,183,20,0.5);
+}
+
+#game-wrapper {
+position: relative;
+border: 3px solid #e2b714;
+box-shadow: 0 0 40px rgba(226,183,20,0.2);
+}
+
+#arena {
+width: 640px; height: 480px;
+background: #1a2214;
+position: relative; overflow: hidden;
+}
+#arena::before {
+content: '';
+position: absolute; inset: 0;
+background-image:
+  linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+background-size: 32px 32px;
+pointer-events: none;
+}
+
+/*
+SPRITESHEET LAYOUT (32x32 per frame, displayed at 3x = 96x96px):
+  Each row = one character class
+  Cols 0-3  = facing DOWN  (idle + 3 walk frames)
+  Cols 4-7  = facing UP    (idle + 3 walk frames)
+  Cols 8-10 = facing RIGHT (idle + 2 walk frames)
+  Col  11   = facing LEFT  (we mirror RIGHT frames using scaleX(-1))
+
+To show a frame:
+  background-position-x = -(col * 96)px
+  background-position-y = -(row * 96)px
+*/
+#character {
+position: absolute;
+width: 96px; height: 96px;
+image-rendering: pixelated;
+background-image: url('warrior_sheet.png');
+background-repeat: no-repeat;
+background-size: 1152px 2016px;
+background-position: 0px 0px;
+filter: drop-shadow(0 6px 5px rgba(0,0,0,0.7));
+}
+#character.facing-left { transform: scaleX(-1); }
+
+#hud {
+display: flex; justify-content: space-between; align-items: center;
+width: 640px; color: #555; font-size: 7px; padding: 2px 0;
+}
+#hud span { color: #e2b714; }
+
+#game-wrapper::after {
+content: '';
+position: absolute; inset: 0;
+background: repeating-linear-gradient(
+  0deg, transparent, transparent 3px,
+  rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px
+);
+pointer-events: none; z-index: 99;
+}
