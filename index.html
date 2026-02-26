@@ -1,36 +1,466 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-  <meta charset="UTF-8">
-  <title>D&D Explorer</title>
-  <link rel="stylesheet" href="styles.css">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Warrior Collectibles</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { color-scheme: dark; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #111;
+      font-family: system-ui, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+    #stage {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #0f0f0f;
+      outline: none;
+      touch-action: none;
+    }
+    #controls {
+      flex-shrink: 0;
+      height: 140px;
+      background: #1a1a1a;
+      border-top: 1px solid #333;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+    }
+    .player-wrap {
+      position: absolute;
+      width: 32px; height: 32px;
+      will-change: transform;
+    }
+    .player {
+      width: 32px; height: 32px;
+      background-image: url('sheet.png');
+      background-repeat: no-repeat;
+      background-size: 384px 672px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .player.facing-left {
+      transform: scaleX(-1);
+      transform-origin: 16px 16px;
+    }
+    #hud {
+      position: absolute; left: 8px; top: 8px; z-index: 10;
+      color: #cbd5e1; font-size: 11px;
+      background: rgba(0,0,0,.55); padding: 5px 9px;
+      border-radius: 6px; border: 1px solid #2a2a2a;
+      pointer-events: none;
+    }
+    #timer {
+      position: absolute; right: 8px; top: 8px; z-index: 10;
+      color: #cbd5e1; font-size: 14px; font-weight: 700;
+      background: rgba(0,0,0,.55); padding: 5px 10px;
+      border-radius: 6px; border: 1px solid #2a2a2a;
+      font-variant-numeric: tabular-nums;
+      pointer-events: none;
+    }
+    #timer.urgent {
+      color: #f87171; border-color: #7f1d1d;
+      animation: pulse .45s ease-in-out infinite alternate;
+    }
+    @keyframes pulse { to { opacity: .35; } }
+    .game-over {
+      position: absolute; inset: 0; z-index: 30;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 14px;
+      background: rgba(0,0,0,.78); color: #f1f5f9;
+    }
+    .game-over h2 { font-size: clamp(20px, 5vw, 30px); }
+    .game-over p  { font-size: clamp(13px, 3vw, 15px); color: #94a3b8; }
+    .game-over button {
+      padding: 11px 30px; border: none; border-radius: 8px;
+      background: #3b82f6; color: #fff;
+      font-size: clamp(14px, 3vw, 16px); font-weight: 700;
+      cursor: pointer; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .game-over button:active { background: #2563eb; }
+    .collectible {
+      position: absolute; left: 0; top: 0;
+      will-change: transform; pointer-events: none;
+    }
+    .collectible > span {
+      display: block; font-size: 22px; line-height: 1;
+      animation: bob 1.6s ease-in-out infinite;
+    }
+    @keyframes bob { 50% { transform: translateY(-4px); } }
+    .pop {
+      position: absolute; left: 0; top: 0; z-index: 10;
+      color: #fbbf24; font-weight: 700; font-size: 13px;
+      text-shadow: 0 1px 3px rgba(0,0,0,.7);
+      animation: upfade .6s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes upfade {
+      0%   { opacity: 1; transform: translate(0,0); }
+      100% { opacity: 0; transform: translate(0,-26px); }
+    }
+    #joystick-base {
+      width: 110px; height: 110px; border-radius: 50%;
+      background: rgba(255,255,255,.07);
+      border: 2px solid rgba(255,255,255,.18);
+      position: relative; flex-shrink: 0;
+      touch-action: none;
+    }
+    #joystick-thumb {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: rgba(255,255,255,.3);
+      border: 2px solid rgba(255,255,255,.55);
+      box-shadow: 0 2px 8px rgba(0,0,0,.4);
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      pointer-events: none;
+    }
+    #mobile-score-display {
+      margin-left: auto;
+      color: #fbbf24; font-size: 32px; font-weight: 800;
+      text-shadow: 0 2px 10px rgba(0,0,0,.5);
+      padding-right: 8px;
+    }
+  </style>
 </head>
 <body>
-
-<div id="select-screen">
-  <h1>⚔ CHOOSE YOUR CLASS ⚔</h1>
-  <div id="class-grid"></div>
-  <p>click a character to begin</p>
-</div>
-
-<div id="game-screen">
-  <div id="game-title">⚔ D&D EXPLORER ⚔</div>
-  <div id="game-wrapper">
-    <div id="arena">
-      <div id="character"></div>
+  <div id="app">
+    <div id="stage" tabindex="0">
+      <div id="hud">Score: 0</div>
+      <div id="timer">30s</div>
+      <div class="player-wrap" id="playerWrap">
+        <div class="player" id="player"></div>
+      </div>
+    </div>
+    <div id="controls">
+      <div id="joystick-base">
+        <div id="joystick-thumb"></div>
+      </div>
+      <div id="mobile-score-display">0</div>
     </div>
   </div>
-  <div id="hud">
-    <div>CLASS: <span id="hud-class">—</span></div>
-    <div>FACING: <span id="hud-dir">DOWN</span></div>
-    <div>ARROW KEYS / WASD TO MOVE</div>
-  </div>
-</div>
 
-<script src="script.js">
+<script>
+(function () {
+  'use strict';
+
+  var FRAME_PX = 32, CHAR_ROW = 2;
+  var ANIM = {
+    down:  [0,1,2,3],
+    up:    [4,5,6,7],
+    right: [8,9,10,9],
+    left:  [8,9,10,9]
+  };
+
+  var stageEl    = document.getElementById('stage');
+  var playerEl   = document.getElementById('player');
+  var wrapEl     = document.getElementById('playerWrap');
+  var hudEl      = document.getElementById('hud');
+  var timerEl    = document.getElementById('timer');
+  var controlsEl = document.getElementById('controls');
+  var jBase      = document.getElementById('joystick-base');
+  var jThumb     = document.getElementById('joystick-thumb');
+  var mScoreEl   = document.getElementById('mobile-score-display');
+
+  // Touch detection
+  var hasTouchScreen = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+  function applyLayout() {
+    controlsEl.style.display = hasTouchScreen ? 'flex' : 'none';
+  }
+  applyLayout();
+
+  function getStageDims() {
+    return { w: stageEl.clientWidth, h: stageEl.clientHeight };
+  }
+
+  // Player
+  var player = { x: 60, y: 60, w: 32, h: 32, speed: 170, vx: 0, vy: 0, accel: 1900 };
+  var direction = 'down', walkFrame = 0, walkTick = 0;
+  var WALK_TICKS = 7;
+
+  // Keyboard
+  var keys = Object.create(null);
+  window.addEventListener('keydown', function(e) {
+    keys[e.key] = true;
+    if (/^Arrow|^[wasdWASD]$/.test(e.key)) e.preventDefault();
+  }, { passive: false });
+  window.addEventListener('keyup', function(e) { keys[e.key] = false; });
+
+  // Joystick
+  var joyX = 0, joyY = 0;
+  var joyActive = false, joyPointerId = null;
+  var JOY_MAX = (110 - 46) / 2;
+
+  function getJoyCenter() {
+    var r = jBase.getBoundingClientRect();
+    return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+  }
+
+  function updateJoy(clientX, clientY) {
+    var c = getJoyCenter();
+    var dx = clientX - c.cx;
+    var dy = clientY - c.cy;
+    var dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist > JOY_MAX) { dx = dx/dist*JOY_MAX; dy = dy/dist*JOY_MAX; }
+    joyX = dx / JOY_MAX;
+    joyY = dy / JOY_MAX;
+    jThumb.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
+  }
+
+  function onJoyStart(e) {
+    e.preventDefault();
+    if (joyActive) return;
+    var pt = e.changedTouches ? e.changedTouches[0] : e;
+    joyActive = true;
+    joyPointerId = (pt.identifier !== undefined) ? pt.identifier : -1;
+    updateJoy(pt.clientX, pt.clientY);
+  }
+
+  function onJoyMove(e) {
+    if (!joyActive) return;
+    e.preventDefault();
+    var pt = null;
+    if (e.changedTouches) {
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === joyPointerId) { pt = e.changedTouches[i]; break; }
+      }
+    } else { pt = e; }
+    if (pt) updateJoy(pt.clientX, pt.clientY);
+  }
+
+  function onJoyEnd(e) {
+    if (!joyActive) return;
+    if (e.changedTouches) {
+      var found = false;
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === joyPointerId) { found = true; break; }
+      }
+      if (!found) return;
+    }
+    joyActive = false; joyPointerId = null;
+    joyX = 0; joyY = 0;
+    jThumb.style.transform = 'translate(-50%,-50%)';
+  }
+
+  // Joystick starts on controls panel; move/end on window so dragging off still works
+  controlsEl.addEventListener('touchstart', onJoyStart, { passive: false });
+  window.addEventListener('touchmove',   onJoyMove,  { passive: false });
+  window.addEventListener('touchend',    onJoyEnd,   { passive: false });
+  window.addEventListener('touchcancel', onJoyEnd,   { passive: false });
+
+  var clamp   = function(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); };
+  var overlap = function(a, b) {
+    return !(a.x+a.w<=b.x || a.x>=b.x+b.w || a.y+a.h<=b.y || a.y>=b.y+b.h);
+  };
+
+  // Walls
+  var walls = [];
+  function refreshWalls() {
+    var sr = stageEl.getBoundingClientRect();
+    walls = Array.prototype.slice.call(document.querySelectorAll('.wall')).map(function(w) {
+      var r = w.getBoundingClientRect();
+      return { x: r.left-sr.left, y: r.top-sr.top, w: r.width, h: r.height };
+    });
+  }
+  refreshWalls();
+
+  function onResize() {
+    hasTouchScreen = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    applyLayout();
+    refreshWalls();
+    var s = getStageDims();
+    player.x = clamp(player.x, 0, s.w - player.w);
+    player.y = clamp(player.y, 0, s.h - player.h);
+    collectibles.forEach(function(c) {
+      c.x = clamp(c.x, 0, s.w - c.w);
+      c.y = clamp(c.y, 0, s.h - c.h);
+      c.el.style.transform = 'translate(' + c.x + 'px,' + c.y + 'px)';
+    });
+  }
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', function() { setTimeout(onResize, 150); });
+
+  // Collectibles
+  var score = 0, nextId = 1;
+  var EMOJIS = ['🍎','💎','🪙','🍪','🧡','🍒','🍓','🍀'];
+  var collectibles = [];
+
+  function addCollectible(char, x, y) {
+    var el = document.createElement('div');
+    el.className = 'collectible';
+    var sp = document.createElement('span');
+    sp.textContent = char;
+    el.appendChild(sp);
+    stageEl.appendChild(el);
+    var c = { id: nextId++, x: x, y: y, w: 22, h: 22, el: el };
+    el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    return c;
+  }
+
+  function canPlace(rect) {
+    var s = getStageDims(), m = 12;
+    if (rect.x<m || rect.y<m || rect.x+rect.w>s.w-m || rect.y+rect.h>s.h-m) return false;
+    if (overlap({ x:rect.x-m, y:rect.y-m, w:rect.w+m*2, h:rect.h+m*2 }, player)) return false;
+    for (var i=0; i<walls.length; i++) if (overlap(rect, walls[i])) return false;
+    for (var j=0; j<collectibles.length; j++) if (overlap(rect, collectibles[j])) return false;
+    return true;
+  }
+
+  function spawnCollectible() {
+    var s = getStageDims();
+    if (s.w < 10 || s.h < 10) return;
+    var r, tries = 0;
+    do {
+      r = { x: Math.random()*(s.w-44)+12, y: Math.random()*(s.h-44)+12, w: 22, h: 22 };
+    } while (!canPlace(r) && ++tries < 300);
+    collectibles.push(addCollectible(EMOJIS[Math.floor(Math.random()*EMOJIS.length)], r.x, r.y));
+  }
+
+  function ensureCollectibles() {
+    while (collectibles.length < 6) spawnCollectible();
+  }
+
+  function popText(x, y) {
+    var el = document.createElement('div');
+    el.className = 'pop'; el.textContent = '+1';
+    el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    stageEl.appendChild(el);
+    setTimeout(function() { el.remove(); }, 650);
+  }
+
+  function applySprite() {
+    var col = ANIM[direction][walkFrame % ANIM[direction].length];
+    playerEl.style.backgroundPosition = (-col*FRAME_PX)+'px '+(-CHAR_ROW*FRAME_PX)+'px';
+    if (direction === 'left') playerEl.classList.add('facing-left');
+    else playerEl.classList.remove('facing-left');
+  }
+
+  function moveAxis(axis, delta) {
+    if (!delta) return;
+    var next = { x: player.x, y: player.y, w: player.w, h: player.h };
+    next[axis] += delta;
+    for (var i=0; i<walls.length; i++) {
+      if (overlap(next, walls[i])) {
+        var w = walls[i];
+        if (axis === 'x') next.x = delta>0 ? w.x-player.w : w.x+w.w;
+        else              next.y = delta>0 ? w.y-player.h : w.y+w.h;
+        break;
+      }
+    }
+    player[axis] = next[axis];
+  }
+
+  // Timer
+  var GAME_DURATION = 30;
+  var timeLeft = GAME_DURATION, gameOver = false;
+
+  function showGameOver() {
+    gameOver = true;
+    var el = document.createElement('div');
+    el.className = 'game-over';
+    el.innerHTML = '<h2>Time\'s Up!</h2><p>Final Score: <strong style="color:#fbbf24">'+score+'</strong></p><button id="restartBtn">Play Again</button>';
+    stageEl.appendChild(el);
+    document.getElementById('restartBtn').addEventListener('click', function() {
+      el.remove();
+      score = 0; timeLeft = GAME_DURATION; gameOver = false;
+      player.x = 60; player.y = 60; player.vx = 0; player.vy = 0;
+      collectibles.forEach(function(c) { c.el.remove(); });
+      collectibles = [];
+      ensureCollectibles();
+      updateHUD();
+    });
+  }
+
+  function updateHUD() {
+    hudEl.textContent = 'Score: ' + score;
+    mScoreEl.textContent = score;
+    var secs = Math.ceil(timeLeft);
+    timerEl.textContent = secs + 's';
+    if (secs <= 5) timerEl.classList.add('urgent');
+    else timerEl.classList.remove('urgent');
+  }
+
+  var last = performance.now();
+
+  function loop(now) {
+    var dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+
+    if (gameOver) { requestAnimationFrame(loop); return; }
+
+    timeLeft = Math.max(0, timeLeft - dt);
+    updateHUD();
+    if (timeLeft <= 0) { showGameOver(); requestAnimationFrame(loop); return; }
+
+    // Input
+    var ix = joyX, iy = joyY;
+    if (keys['ArrowLeft']  || keys['a'] || keys['A']) ix -= 1;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) ix += 1;
+    if (keys['ArrowUp']    || keys['w'] || keys['W']) iy -= 1;
+    if (keys['ArrowDown']  || keys['s'] || keys['S']) iy += 1;
+    var mag = Math.sqrt(ix*ix + iy*iy);
+    if (mag > 1) { ix /= mag; iy /= mag; }
+
+    // Physics
+    var tvx = ix*player.speed, tvy = iy*player.speed, snap = 5;
+    player.vx = Math.abs(tvx-player.vx)<snap ? tvx : player.vx + player.accel*((tvx>player.vx)?1:-1)*dt;
+    player.vy = Math.abs(tvy-player.vy)<snap ? tvy : player.vy + player.accel*((tvy>player.vy)?1:-1)*dt;
+
+    moveAxis('x', player.vx * dt);
+    moveAxis('y', player.vy * dt);
+
+    var s = getStageDims();
+    player.x = clamp(player.x, 0, s.w - player.w);
+    player.y = clamp(player.y, 0, s.h - player.h);
+
+    var moving = Math.abs(player.vx)>2 || Math.abs(player.vy)>2;
+    if      (Math.abs(player.vy) > Math.abs(player.vx)) direction = player.vy<0 ? 'up'   : 'down';
+    else if (Math.abs(player.vx) > 2)                   direction = player.vx<0 ? 'left' : 'right';
+
+    if (moving) { if (++walkTick >= WALK_TICKS) { walkTick=0; walkFrame=(walkFrame+1)%4; } }
+    else        { walkFrame=0; walkTick=0; }
+
+    for (var i=collectibles.length-1; i>=0; i--) {
+      if (overlap(player, collectibles[i])) {
+        score++;
+        popText(collectibles[i].x, collectibles[i].y);
+        collectibles[i].el.remove();
+        collectibles.splice(i, 1);
+        setTimeout(spawnCollectible, 150);
+      }
+    }
+
+    wrapEl.style.transform = 'translate(' + player.x + 'px,' + player.y + 'px)';
+    applySprite();
+
+    requestAnimationFrame(loop);
+  }
+
+  // Init - wait a frame for layout to settle
+  requestAnimationFrame(function() {
+    ensureCollectibles();
+    requestAnimationFrame(loop);
+  });
+
+  if (!hasTouchScreen) stageEl.focus();
+})();
 </script>
 </body>
 </html>
-
-
-
