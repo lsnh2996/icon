@@ -18,6 +18,93 @@
       -webkit-user-select: none;
       user-select: none;
     }
+
+    /* ── Screens ─────────────────────────────────── */
+    .screen { position: fixed; inset: 0; display: flex; flex-direction: column; }
+    .screen.hidden { display: none; }
+
+    /* ── Character Select ────────────────────────── */
+    #select-screen {
+      background: #0d0d0d;
+      align-items: center;
+      justify-content: flex-start;
+      overflow: hidden;
+    }
+    #select-screen h1 {
+      color: #f1f5f9;
+      font-size: clamp(18px, 4vw, 26px);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 16px 0 10px;
+      flex-shrink: 0;
+      text-shadow: 0 0 20px rgba(96,165,250,.6);
+    }
+    #select-screen p.hint {
+      color: #64748b; font-size: 12px; margin-bottom: 12px; flex-shrink: 0;
+    }
+    #char-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      gap: 8px;
+      padding: 8px 16px 16px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+      flex: 1;
+    }
+    .char-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 6px 8px;
+      border-radius: 10px;
+      background: #1a1a1a;
+      border: 2px solid #2a2a2a;
+      cursor: pointer;
+      transition: border-color .15s, background .15s, transform .1s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .char-card:hover   { background: #222; border-color: #3b82f6; }
+    .char-card.selected { background: #1e3a5f; border-color: #3b82f6;
+                          box-shadow: 0 0 12px rgba(59,130,246,.4); }
+    .char-card:active  { transform: scale(.95); }
+    .char-preview {
+      width: 64px; height: 64px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background-image: url('sheet.png');
+      background-repeat: no-repeat;
+      /* backgroundPosition set by JS */
+    }
+    .char-card span {
+      font-size: 10px; color: #94a3b8;
+      text-align: center; line-height: 1.2;
+    }
+    .char-card.selected span { color: #93c5fd; }
+
+    #play-btn {
+      flex-shrink: 0;
+      margin: 12px auto 20px;
+      padding: 13px 48px;
+      background: #3b82f6; color: #fff;
+      font-size: 16px; font-weight: 700;
+      border: none; border-radius: 10px;
+      cursor: pointer; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 20px rgba(59,130,246,.4);
+      transition: background .15s, transform .1s;
+    }
+    #play-btn:hover  { background: #2563eb; }
+    #play-btn:active { transform: scale(.97); }
+
+    /* ── Game screen ─────────────────────────────── */
+    #game-screen {
+      flex-direction: column;
+    }
     #app {
       display: flex;
       flex-direction: column;
@@ -48,7 +135,7 @@
     }
     .player {
       width: 32px; height: 32px;
-      background-image: url('sheet.png');
+      background-image: url('warrior_sheet.png');
       background-repeat: no-repeat;
       background-size: 384px 672px;
       image-rendering: pixelated;
@@ -78,6 +165,17 @@
       animation: pulse .45s ease-in-out infinite alternate;
     }
     @keyframes pulse { to { opacity: .35; } }
+
+    /* Change character button in game */
+    #change-char-btn {
+      position: absolute; left: 8px; bottom: 8px; z-index: 10;
+      background: rgba(0,0,0,.55); border: 1px solid #2a2a2a;
+      color: #94a3b8; font-size: 11px; padding: 5px 9px;
+      border-radius: 6px; cursor: pointer;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    }
+    #change-char-btn:active { background: rgba(59,130,246,.3); }
+
     .game-over {
       position: absolute; inset: 0; z-index: 30;
       display: flex; flex-direction: column;
@@ -86,14 +184,17 @@
     }
     .game-over h2 { font-size: clamp(20px, 5vw, 30px); }
     .game-over p  { font-size: clamp(13px, 3vw, 15px); color: #94a3b8; }
+    .game-over .btn-row { display: flex; gap: 12px; }
     .game-over button {
-      padding: 11px 30px; border: none; border-radius: 8px;
-      background: #3b82f6; color: #fff;
-      font-size: clamp(14px, 3vw, 16px); font-weight: 700;
+      padding: 11px 24px; border: none; border-radius: 8px;
+      color: #fff; font-size: clamp(13px, 3vw, 15px); font-weight: 700;
       cursor: pointer; touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
     }
-    .game-over button:active { background: #2563eb; }
+    .game-over button:active { opacity: .8; }
+    .btn-play-again { background: #3b82f6; }
+    .btn-change-char { background: #475569; }
+
     .collectible {
       position: absolute; left: 0; top: 0;
       will-change: transform; pointer-events: none;
@@ -126,8 +227,7 @@
       background: rgba(255,255,255,.3);
       border: 2px solid rgba(255,255,255,.55);
       box-shadow: 0 2px 8px rgba(0,0,0,.4);
-      position: absolute;
-      top: 50%; left: 50%;
+      position: absolute; top: 50%; left: 50%;
       transform: translate(-50%,-50%);
       pointer-events: none;
     }
@@ -140,19 +240,32 @@
   </style>
 </head>
 <body>
-  <div id="app">
-    <div id="stage" tabindex="0">
-      <div id="hud">Score: 0</div>
-      <div id="timer">30s</div>
-      <div class="player-wrap" id="playerWrap">
-        <div class="player" id="player"></div>
+
+  <!-- ── Character Select Screen ── -->
+  <div class="screen" id="select-screen">
+    <h1>Choose Your Warrior</h1>
+    <p class="hint">Tap a character to select</p>
+    <div id="char-grid"></div>
+    <button id="play-btn">▶ Play</button>
+  </div>
+
+  <!-- ── Game Screen ── -->
+  <div class="screen hidden" id="game-screen">
+    <div id="app">
+      <div id="stage" tabindex="0">
+        <div id="hud">Score: 0</div>
+        <div id="timer">30s</div>
+        <button id="change-char-btn">⚔ Change</button>
+        <div class="player-wrap" id="playerWrap">
+          <div class="player" id="player"></div>
+        </div>
       </div>
-    </div>
-    <div id="controls">
-      <div id="joystick-base">
-        <div id="joystick-thumb"></div>
+      <div id="controls">
+        <div id="joystick-base">
+          <div id="joystick-thumb"></div>
+        </div>
+        <div id="mobile-score-display">0</div>
       </div>
-      <div id="mobile-score-display">0</div>
     </div>
   </div>
 
@@ -160,7 +273,8 @@
 (function () {
   'use strict';
 
-  var FRAME_PX = 32, CHAR_ROW = 2;
+  // ── Sprite constants ──────────────────────────────────
+  var FRAME_PX = 32, TOTAL_CHARS = 21;
   var ANIM = {
     down:  [0,1,2,3],
     up:    [4,5,6,7],
@@ -168,19 +282,109 @@
     left:  [8,9,10,9]
   };
 
-  var stageEl    = document.getElementById('stage');
-  var playerEl   = document.getElementById('player');
-  var wrapEl     = document.getElementById('playerWrap');
-  var hudEl      = document.getElementById('hud');
-  var timerEl    = document.getElementById('timer');
-  var controlsEl = document.getElementById('controls');
-  var jBase      = document.getElementById('joystick-base');
-  var jThumb     = document.getElementById('joystick-thumb');
-  var mScoreEl   = document.getElementById('mobile-score-display');
+  // Character names for the selector
+  var CHAR_NAMES = [
+    'Robot','Knight','Warrior','Berserker',
+    'Paladin','Mage','Priest','Fighter',
+    'Ranger','Rogue','Brawler','Dark Knight',
+    'Crusader','Witch','Ninja','Champion',
+    'Guardian','Dragon Knight','Aqua Knight','Sentinel',
+    'Warlord'
+  ];
 
-  // Touch detection
+  // ── DOM refs ──────────────────────────────────────────
+  var selectScreen = document.getElementById('select-screen');
+  var gameScreen   = document.getElementById('game-screen');
+  var charGrid     = document.getElementById('char-grid');
+  var playBtn      = document.getElementById('play-btn');
+  var changeBtn    = document.getElementById('change-char-btn');
+  var stageEl      = document.getElementById('stage');
+  var playerEl     = document.getElementById('player');
+  var wrapEl       = document.getElementById('playerWrap');
+  var hudEl        = document.getElementById('hud');
+  var timerEl      = document.getElementById('timer');
+  var controlsEl   = document.getElementById('controls');
+  var jBase        = document.getElementById('joystick-base');
+  var jThumb       = document.getElementById('joystick-thumb');
+  var mScoreEl     = document.getElementById('mobile-score-display');
+
+  // ── Character selection ───────────────────────────────
+  var selectedChar = 0; // row index 0-20
+
+  // Build the grid
+  for (var r = 0; r < TOTAL_CHARS; r++) {
+    (function(row) {
+      var card = document.createElement('div');
+      card.className = 'char-card' + (row === 0 ? ' selected' : '');
+      card.setAttribute('data-row', row);
+
+      var preview = document.createElement('div');
+      preview.className = 'char-preview';
+      // Show col 0 (idle down) of this character row, scaled 2x in the 64px box
+      // Sheet is 384x672 native; we scale to show 32px frame in 64px box = 2x
+      preview.style.backgroundSize = '768px 1344px';
+      preview.style.backgroundPosition = '0px ' + (-row * 64) + 'px';
+
+      var label = document.createElement('span');
+      label.textContent = CHAR_NAMES[row];
+
+      card.appendChild(preview);
+      card.appendChild(label);
+      card.addEventListener('click', function() { selectCharacter(row); });
+      card.addEventListener('touchend', function(e) { e.preventDefault(); selectCharacter(row); });
+      charGrid.appendChild(card);
+    })(r);
+  }
+
+  function selectCharacter(row) {
+    selectedChar = row;
+    var cards = charGrid.querySelectorAll('.char-card');
+    for (var i = 0; i < cards.length; i++) {
+      cards[i].classList.toggle('selected', parseInt(cards[i].getAttribute('data-row')) === row);
+    }
+  }
+
+  playBtn.addEventListener('click', startGame);
+  playBtn.addEventListener('touchend', function(e) { e.preventDefault(); startGame(); });
+
+  changeBtn.addEventListener('click', goToSelect);
+  changeBtn.addEventListener('touchend', function(e) { e.preventDefault(); goToSelect(); });
+
+  function goToSelect() {
+    // Pause game
+    gameOver = true;
+    // Clear stage
+    var goEl = stageEl.querySelector('.game-over');
+    if (goEl) goEl.remove();
+    collectibles.forEach(function(c) { c.el.remove(); });
+    collectibles = [];
+    // Show select screen
+    gameScreen.classList.add('hidden');
+    selectScreen.classList.remove('hidden');
+  }
+
+  function startGame() {
+    selectScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    // Apply selected character
+    playerEl.style.backgroundPosition = '0px ' + (-selectedChar * FRAME_PX) + 'px';
+    // Reset game state
+    score = 0; timeLeft = GAME_DURATION; gameOver = false;
+    player.x = 60; player.y = 60; player.vx = 0; player.vy = 0;
+    direction = 'down'; walkFrame = 0; walkTick = 0;
+    collectibles.forEach(function(c) { c.el.remove(); });
+    collectibles = [];
+    var goEl = stageEl.querySelector('.game-over');
+    if (goEl) goEl.remove();
+    refreshWalls();
+    requestAnimationFrame(function() {
+      ensureCollectibles();
+      if (!hasTouchScreen) stageEl.focus();
+    });
+  }
+
+  // ── Touch detection ───────────────────────────────────
   var hasTouchScreen = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
   function applyLayout() {
     controlsEl.style.display = hasTouchScreen ? 'flex' : 'none';
   }
@@ -190,12 +394,12 @@
     return { w: stageEl.clientWidth, h: stageEl.clientHeight };
   }
 
-  // Player
+  // ── Player state ──────────────────────────────────────
   var player = { x: 60, y: 60, w: 32, h: 32, speed: 170, vx: 0, vy: 0, accel: 1900 };
   var direction = 'down', walkFrame = 0, walkTick = 0;
   var WALK_TICKS = 7;
 
-  // Keyboard
+  // ── Keyboard input ────────────────────────────────────
   var keys = Object.create(null);
   window.addEventListener('keydown', function(e) {
     keys[e.key] = true;
@@ -203,101 +407,87 @@
   }, { passive: false });
   window.addEventListener('keyup', function(e) { keys[e.key] = false; });
 
-  // Joystick
+  // ── Joystick ──────────────────────────────────────────
   var joyX = 0, joyY = 0;
   var joyActive = false, joyPointerId = null;
   var JOY_MAX = (110 - 46) / 2;
 
   function getJoyCenter() {
     var r = jBase.getBoundingClientRect();
-    return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+    return { cx: r.left + r.width/2, cy: r.top + r.height/2 };
   }
-
   function updateJoy(clientX, clientY) {
     var c = getJoyCenter();
-    var dx = clientX - c.cx;
-    var dy = clientY - c.cy;
+    var dx = clientX - c.cx, dy = clientY - c.cy;
     var dist = Math.sqrt(dx*dx + dy*dy);
     if (dist > JOY_MAX) { dx = dx/dist*JOY_MAX; dy = dy/dist*JOY_MAX; }
-    joyX = dx / JOY_MAX;
-    joyY = dy / JOY_MAX;
-    jThumb.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
+    joyX = dx/JOY_MAX; joyY = dy/JOY_MAX;
+    jThumb.style.transform = 'translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px))';
   }
-
   function onJoyStart(e) {
     e.preventDefault();
     if (joyActive) return;
     var pt = e.changedTouches ? e.changedTouches[0] : e;
-    joyActive = true;
-    joyPointerId = (pt.identifier !== undefined) ? pt.identifier : -1;
+    joyActive = true; joyPointerId = (pt.identifier !== undefined) ? pt.identifier : -1;
     updateJoy(pt.clientX, pt.clientY);
   }
-
   function onJoyMove(e) {
     if (!joyActive) return;
     e.preventDefault();
     var pt = null;
     if (e.changedTouches) {
-      for (var i = 0; i < e.changedTouches.length; i++) {
+      for (var i=0; i<e.changedTouches.length; i++)
         if (e.changedTouches[i].identifier === joyPointerId) { pt = e.changedTouches[i]; break; }
-      }
     } else { pt = e; }
     if (pt) updateJoy(pt.clientX, pt.clientY);
   }
-
   function onJoyEnd(e) {
     if (!joyActive) return;
     if (e.changedTouches) {
       var found = false;
-      for (var i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === joyPointerId) { found = true; break; }
-      }
+      for (var i=0; i<e.changedTouches.length; i++)
+        if (e.changedTouches[i].identifier === joyPointerId) { found=true; break; }
       if (!found) return;
     }
     joyActive = false; joyPointerId = null;
     joyX = 0; joyY = 0;
     jThumb.style.transform = 'translate(-50%,-50%)';
   }
-
-  // Joystick starts on controls panel; move/end on window so dragging off still works
   controlsEl.addEventListener('touchstart', onJoyStart, { passive: false });
   window.addEventListener('touchmove',   onJoyMove,  { passive: false });
   window.addEventListener('touchend',    onJoyEnd,   { passive: false });
   window.addEventListener('touchcancel', onJoyEnd,   { passive: false });
 
-  var clamp   = function(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); };
-  var overlap = function(a, b) {
-    return !(a.x+a.w<=b.x || a.x>=b.x+b.w || a.y+a.h<=b.y || a.y>=b.y+b.h);
-  };
+  // ── Utilities ─────────────────────────────────────────
+  var clamp   = function(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); };
+  var overlap = function(a,b){ return !(a.x+a.w<=b.x||a.x>=b.x+b.w||a.y+a.h<=b.y||a.y>=b.y+b.h); };
 
-  // Walls
+  // ── Walls ─────────────────────────────────────────────
   var walls = [];
   function refreshWalls() {
     var sr = stageEl.getBoundingClientRect();
     walls = Array.prototype.slice.call(document.querySelectorAll('.wall')).map(function(w) {
       var r = w.getBoundingClientRect();
-      return { x: r.left-sr.left, y: r.top-sr.top, w: r.width, h: r.height };
+      return { x:r.left-sr.left, y:r.top-sr.top, w:r.width, h:r.height };
     });
   }
-  refreshWalls();
 
   function onResize() {
-    hasTouchScreen = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    hasTouchScreen = ('ontouchstart' in window)||(navigator.maxTouchPoints>0);
     applyLayout();
     refreshWalls();
     var s = getStageDims();
-    player.x = clamp(player.x, 0, s.w - player.w);
-    player.y = clamp(player.y, 0, s.h - player.h);
-    collectibles.forEach(function(c) {
-      c.x = clamp(c.x, 0, s.w - c.w);
-      c.y = clamp(c.y, 0, s.h - c.h);
-      c.el.style.transform = 'translate(' + c.x + 'px,' + c.y + 'px)';
+    player.x = clamp(player.x,0,s.w-player.w);
+    player.y = clamp(player.y,0,s.h-player.h);
+    collectibles.forEach(function(c){
+      c.x=clamp(c.x,0,s.w-c.w); c.y=clamp(c.y,0,s.h-c.h);
+      c.el.style.transform='translate('+c.x+'px,'+c.y+'px)';
     });
   }
   window.addEventListener('resize', onResize);
-  window.addEventListener('orientationchange', function() { setTimeout(onResize, 150); });
+  window.addEventListener('orientationchange', function(){ setTimeout(onResize,150); });
 
-  // Collectibles
+  // ── Collectibles ──────────────────────────────────────
   var score = 0, nextId = 1;
   var EMOJIS = ['🍎','💎','🪙','🍪','🧡','🍒','🍓','🍀'];
   var collectibles = [];
@@ -306,68 +496,64 @@
     var el = document.createElement('div');
     el.className = 'collectible';
     var sp = document.createElement('span');
-    sp.textContent = char;
-    el.appendChild(sp);
+    sp.textContent = char; el.appendChild(sp);
     stageEl.appendChild(el);
-    var c = { id: nextId++, x: x, y: y, w: 22, h: 22, el: el };
-    el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    var c = { id:nextId++, x:x, y:y, w:22, h:22, el:el };
+    el.style.transform = 'translate('+x+'px,'+y+'px)';
     return c;
   }
-
   function canPlace(rect) {
-    var s = getStageDims(), m = 12;
-    if (rect.x<m || rect.y<m || rect.x+rect.w>s.w-m || rect.y+rect.h>s.h-m) return false;
-    if (overlap({ x:rect.x-m, y:rect.y-m, w:rect.w+m*2, h:rect.h+m*2 }, player)) return false;
-    for (var i=0; i<walls.length; i++) if (overlap(rect, walls[i])) return false;
-    for (var j=0; j<collectibles.length; j++) if (overlap(rect, collectibles[j])) return false;
+    var s=getStageDims(), m=12;
+    if(rect.x<m||rect.y<m||rect.x+rect.w>s.w-m||rect.y+rect.h>s.h-m) return false;
+    if(overlap({x:rect.x-m,y:rect.y-m,w:rect.w+m*2,h:rect.h+m*2},player)) return false;
+    for(var i=0;i<walls.length;i++) if(overlap(rect,walls[i])) return false;
+    for(var j=0;j<collectibles.length;j++) if(overlap(rect,collectibles[j])) return false;
     return true;
   }
-
   function spawnCollectible() {
-    var s = getStageDims();
-    if (s.w < 10 || s.h < 10) return;
-    var r, tries = 0;
-    do {
-      r = { x: Math.random()*(s.w-44)+12, y: Math.random()*(s.h-44)+12, w: 22, h: 22 };
-    } while (!canPlace(r) && ++tries < 300);
-    collectibles.push(addCollectible(EMOJIS[Math.floor(Math.random()*EMOJIS.length)], r.x, r.y));
+    var s=getStageDims();
+    if(s.w<10||s.h<10) return;
+    var r, tries=0;
+    do { r={x:Math.random()*(s.w-44)+12,y:Math.random()*(s.h-44)+12,w:22,h:22}; }
+    while(!canPlace(r)&&++tries<300);
+    collectibles.push(addCollectible(EMOJIS[Math.floor(Math.random()*EMOJIS.length)],r.x,r.y));
   }
-
   function ensureCollectibles() {
-    while (collectibles.length < 6) spawnCollectible();
+    while(collectibles.length<6) spawnCollectible();
   }
-
-  function popText(x, y) {
-    var el = document.createElement('div');
-    el.className = 'pop'; el.textContent = '+1';
-    el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+  function popText(x,y) {
+    var el=document.createElement('div');
+    el.className='pop'; el.textContent='+1';
+    el.style.transform='translate('+x+'px,'+y+'px)';
     stageEl.appendChild(el);
-    setTimeout(function() { el.remove(); }, 650);
+    setTimeout(function(){ el.remove(); },650);
   }
 
+  // ── Sprite ────────────────────────────────────────────
   function applySprite() {
     var col = ANIM[direction][walkFrame % ANIM[direction].length];
-    playerEl.style.backgroundPosition = (-col*FRAME_PX)+'px '+(-CHAR_ROW*FRAME_PX)+'px';
-    if (direction === 'left') playerEl.classList.add('facing-left');
+    playerEl.style.backgroundPosition = (-col*FRAME_PX)+'px '+(-selectedChar*FRAME_PX)+'px';
+    if(direction==='left') playerEl.classList.add('facing-left');
     else playerEl.classList.remove('facing-left');
   }
 
+  // ── Movement ──────────────────────────────────────────
   function moveAxis(axis, delta) {
-    if (!delta) return;
-    var next = { x: player.x, y: player.y, w: player.w, h: player.h };
-    next[axis] += delta;
-    for (var i=0; i<walls.length; i++) {
-      if (overlap(next, walls[i])) {
-        var w = walls[i];
-        if (axis === 'x') next.x = delta>0 ? w.x-player.w : w.x+w.w;
-        else              next.y = delta>0 ? w.y-player.h : w.y+w.h;
+    if(!delta) return;
+    var next={x:player.x,y:player.y,w:player.w,h:player.h};
+    next[axis]+=delta;
+    for(var i=0;i<walls.length;i++){
+      if(overlap(next,walls[i])){
+        var w=walls[i];
+        if(axis==='x') next.x=delta>0?w.x-player.w:w.x+w.w;
+        else           next.y=delta>0?w.y-player.h:w.y+w.h;
         break;
       }
     }
-    player[axis] = next[axis];
+    player[axis]=next[axis];
   }
 
-  // Timer
+  // ── Timer / Game over ─────────────────────────────────
   var GAME_DURATION = 30;
   var timeLeft = GAME_DURATION, gameOver = false;
 
@@ -375,91 +561,89 @@
     gameOver = true;
     var el = document.createElement('div');
     el.className = 'game-over';
-    el.innerHTML = '<h2>Time\'s Up!</h2><p>Final Score: <strong style="color:#fbbf24">'+score+'</strong></p><button id="restartBtn">Play Again</button>';
+    el.innerHTML = '<h2>Time\'s Up!</h2><p>Final Score: <strong style="color:#fbbf24">'+score+'</strong></p><div class="btn-row"><button class="btn-play-again" id="restartBtn">Play Again</button><button class="btn-change-char" id="changeCharBtn">Change Character</button></div>';
     stageEl.appendChild(el);
-    document.getElementById('restartBtn').addEventListener('click', function() {
-      el.remove();
-      score = 0; timeLeft = GAME_DURATION; gameOver = false;
-      player.x = 60; player.y = 60; player.vx = 0; player.vy = 0;
-      collectibles.forEach(function(c) { c.el.remove(); });
-      collectibles = [];
-      ensureCollectibles();
-      updateHUD();
+    document.getElementById('restartBtn').addEventListener('click', function(){
+      el.remove(); startGame();
+    });
+    document.getElementById('changeCharBtn').addEventListener('click', function(){
+      el.remove(); goToSelect();
     });
   }
 
   function updateHUD() {
-    hudEl.textContent = 'Score: ' + score;
+    hudEl.textContent  = 'Score: '+score;
     mScoreEl.textContent = score;
     var secs = Math.ceil(timeLeft);
-    timerEl.textContent = secs + 's';
-    if (secs <= 5) timerEl.classList.add('urgent');
+    timerEl.textContent = secs+'s';
+    if(secs<=5) timerEl.classList.add('urgent');
     else timerEl.classList.remove('urgent');
   }
 
+  // ── Game loop ─────────────────────────────────────────
   var last = performance.now();
+  var loopRunning = false;
 
   function loop(now) {
-    var dt = Math.min((now - last) / 1000, 0.05);
+    var dt = Math.min((now-last)/1000, 0.05);
     last = now;
 
-    if (gameOver) { requestAnimationFrame(loop); return; }
+    if(gameOver) { requestAnimationFrame(loop); return; }
 
-    timeLeft = Math.max(0, timeLeft - dt);
+    timeLeft = Math.max(0, timeLeft-dt);
     updateHUD();
-    if (timeLeft <= 0) { showGameOver(); requestAnimationFrame(loop); return; }
+    if(timeLeft<=0) { showGameOver(); requestAnimationFrame(loop); return; }
 
-    // Input
-    var ix = joyX, iy = joyY;
-    if (keys['ArrowLeft']  || keys['a'] || keys['A']) ix -= 1;
-    if (keys['ArrowRight'] || keys['d'] || keys['D']) ix += 1;
-    if (keys['ArrowUp']    || keys['w'] || keys['W']) iy -= 1;
-    if (keys['ArrowDown']  || keys['s'] || keys['S']) iy += 1;
-    var mag = Math.sqrt(ix*ix + iy*iy);
-    if (mag > 1) { ix /= mag; iy /= mag; }
+    var ix=joyX, iy=joyY;
+    if(keys['ArrowLeft'] ||keys['a']||keys['A']) ix-=1;
+    if(keys['ArrowRight']||keys['d']||keys['D']) ix+=1;
+    if(keys['ArrowUp']   ||keys['w']||keys['W']) iy-=1;
+    if(keys['ArrowDown'] ||keys['s']||keys['S']) iy+=1;
+    var mag=Math.sqrt(ix*ix+iy*iy);
+    if(mag>1){ix/=mag;iy/=mag;}
 
-    // Physics
-    var tvx = ix*player.speed, tvy = iy*player.speed, snap = 5;
-    player.vx = Math.abs(tvx-player.vx)<snap ? tvx : player.vx + player.accel*((tvx>player.vx)?1:-1)*dt;
-    player.vy = Math.abs(tvy-player.vy)<snap ? tvy : player.vy + player.accel*((tvy>player.vy)?1:-1)*dt;
+    var tvx=ix*player.speed, tvy=iy*player.speed, snap=5;
+    player.vx = Math.abs(tvx-player.vx)<snap ? tvx : player.vx+player.accel*((tvx>player.vx)?1:-1)*dt;
+    player.vy = Math.abs(tvy-player.vy)<snap ? tvy : player.vy+player.accel*((tvy>player.vy)?1:-1)*dt;
 
-    moveAxis('x', player.vx * dt);
-    moveAxis('y', player.vy * dt);
+    moveAxis('x', player.vx*dt);
+    moveAxis('y', player.vy*dt);
 
-    var s = getStageDims();
-    player.x = clamp(player.x, 0, s.w - player.w);
-    player.y = clamp(player.y, 0, s.h - player.h);
+    var s=getStageDims();
+    player.x=clamp(player.x,0,s.w-player.w);
+    player.y=clamp(player.y,0,s.h-player.h);
 
-    var moving = Math.abs(player.vx)>2 || Math.abs(player.vy)>2;
-    if      (Math.abs(player.vy) > Math.abs(player.vx)) direction = player.vy<0 ? 'up'   : 'down';
-    else if (Math.abs(player.vx) > 2)                   direction = player.vx<0 ? 'left' : 'right';
+    // Use INPUT to drive animation, not velocity.
+    // Velocity stays non-zero while decelerating or when hitting a wall,
+    // which caused the character to appear stuck in a walk cycle.
+    var inputMoving = mag > 0.1;
+    if(inputMoving) {
+      if(Math.abs(iy)>Math.abs(ix)) direction=iy<0?'up':'down';
+      else                          direction=ix<0?'left':'right';
+      if(++walkTick>=WALK_TICKS){walkTick=0;walkFrame=(walkFrame+1)%4;}
+    } else {
+      walkFrame=0; walkTick=0;
+    }
 
-    if (moving) { if (++walkTick >= WALK_TICKS) { walkTick=0; walkFrame=(walkFrame+1)%4; } }
-    else        { walkFrame=0; walkTick=0; }
-
-    for (var i=collectibles.length-1; i>=0; i--) {
-      if (overlap(player, collectibles[i])) {
+    for(var i=collectibles.length-1;i>=0;i--){
+      if(overlap(player,collectibles[i])){
         score++;
-        popText(collectibles[i].x, collectibles[i].y);
+        popText(collectibles[i].x,collectibles[i].y);
         collectibles[i].el.remove();
-        collectibles.splice(i, 1);
-        setTimeout(spawnCollectible, 150);
+        collectibles.splice(i,1);
+        setTimeout(spawnCollectible,150);
       }
     }
 
-    wrapEl.style.transform = 'translate(' + player.x + 'px,' + player.y + 'px)';
+    wrapEl.style.transform='translate('+player.x+'px,'+player.y+'px)';
     applySprite();
 
     requestAnimationFrame(loop);
   }
 
-  // Init - wait a frame for layout to settle
-  requestAnimationFrame(function() {
-    ensureCollectibles();
-    requestAnimationFrame(loop);
-  });
+  // Start the RAF loop once (it always keeps running, gated by gameOver flag)
+  requestAnimationFrame(loop);
 
-  if (!hasTouchScreen) stageEl.focus();
 })();
 </script>
 </body>
